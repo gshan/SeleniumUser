@@ -89,7 +89,7 @@ namespace SeleniumUser
             });
         }
 
-                public static void Clicks(By by, bool searchFrames = false)
+        public static void Clicks(By by, bool searchFrames = false)
         {
             Debug.WriteLine("Clicking " + by);
 
@@ -229,6 +229,59 @@ namespace SeleniumUser
                     }
 
                     NavigateToNode(b);
+                }
+            }
+
+            return false;
+        }
+        
+        public static bool ShouldSeeElement(By by, string tagId, bool searchFrames = false)
+        {
+            Thread.Sleep(RETRY_DELAY);
+
+            ReadOnlyCollection<IWebElement> frames = Driver.FindElements(By.TagName("iframe"));
+
+            if (frames.Any() && searchFrames)
+            {
+                if (!SearchForElementInFrames(by, tagId, FindFrames(null)))
+                {
+                    Assert.Fail("Could not find element with Id " + tagId);
+                }
+            }
+            else
+            {
+                Wait(@by + " should see element with Id " + tagId,
+                     () =>
+                     Driver.FindElements(by)
+                           .Any(
+                               x =>
+                               x.GetAttribute("id") == tagId &&
+                               (x.Displayed || x.GetAttribute("visability") == "visible")));
+            }
+
+            return false;
+        }
+
+        private static bool SearchForElementInFrames(By by, string tagId, FrameBranch branch)
+        {
+            foreach (FrameBranch b in branch.Frames)
+            {
+                NavigateToBranch(b);
+
+                if (Driver.FindElements(by).Any(x => x.GetAttribute("id") == tagId && x.Displayed))
+                {
+                    Driver.SwitchTo().DefaultContent();
+                    return true;
+                }
+
+                if (b.HasFrames())
+                {
+                    if (SearchForElementInFrames(by, tagId, b))
+                    {
+                        return true;
+                    }
+
+                    NavigateToBranch(b);
                 }
             }
 
