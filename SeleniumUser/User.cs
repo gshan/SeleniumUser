@@ -89,41 +89,103 @@ namespace SeleniumUser
             });
         }
 
-        public static void Clicks(By by)
+                public static void Clicks(By by, bool searchFrames = false)
         {
             Debug.WriteLine("Clicking " + by);
-            Wait(@by + " attempting click", () => { Driver.FindElement(by).Click(); return true; });
+
+            ReadOnlyCollection<IWebElement> frames = Driver.FindElements(By.TagName("iframe"));
+
+            if (frames.Any() && searchFrames)
+            {
+                var wasPerformed =
+                    PerformActionInFrame(() =>
+                        {
+                            IWebElement element = Driver.FindElements(by).SingleOrDefault();
+                            return element != null;
+                        }, () =>
+                        {
+                            Wait(@by + " attempting click", () =>
+                                {
+                                    Driver.FindElement(by).Click();
+                                    return true;
+                                });
+
+                            Driver.SwitchTo().DefaultContent();
+                        }, FindFrames(null));
+
+                if (!wasPerformed)
+                {
+                    Assert.Fail(@by + " was not clicked");
+                }
+            }
+            else
+            {
+                Wait(@by + " attempting click", () =>
+                    {
+                        Driver.FindElement(by).Click();
+                        return true;
+                    });
+            }
         }
 
         public static void Clicks(By by, string text, bool searchFrames = false)
         {
-            var frames = Driver.FindElements(By.TagName("iframe"));
+            ReadOnlyCollection<IWebElement> frames = Driver.FindElements(By.TagName("iframe"));
 
             if (frames.Any() && searchFrames)
             {
-                foreach (var frame in frames)
-                {
-                    Driver.SwitchTo().Frame(frame);
-
-                    var element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
-                    if (element != null)
-                    {
-                        Wait(@by + "attempting click", () => element.Click());
-                        Driver.SwitchTo().DefaultContent();
-                        return;
-                    }
-
-                    Driver.SwitchTo().DefaultContent();
-                }
+                var wasPerformed =
+                    PerformActionInFrame(() =>
+                        {
+                            IWebElement element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
+                            return element != null;
+                        },
+                                         () =>
+                                             {
+                                                 IWebElement element =
+                                                     Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
+                                                 Wait(@by + " attempting click", () => element.Click());
+                                                 Driver.SwitchTo().DefaultContent();
+                                             }, FindFrames(null));
 
                 Driver.SwitchTo().DefaultContent();
+
+                if (!wasPerformed)
+                {
+                    Assert.Fail(@by + " was not clicked");
+                }
             }
             else
             {
-                var element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
+                IWebElement element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
 
-                Wait(@by + "attempting click", () => element.Click());
+                Wait("Attempting click", () => element.Click());
             }
+        }
+
+        private static bool PerformActionInFrame(Func<bool> condition, Action action, FrameBranch branch)
+        {
+            foreach (FrameBranch b in branch.Frames)
+            {
+                NavigateToBranch(b);
+
+                if (condition())
+                {
+                    action();
+                    return true;
+                }
+
+                if (!b.HasFrames()) continue;
+
+                if (PerformActionInFrame(condition, action, b))
+                {
+                    return true;
+                }
+
+                NavigateToBranch(b);
+            }
+
+            return false;
         }
 
         public static bool ShouldSeeText(By by, string text, bool searchFrames = false)
