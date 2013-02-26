@@ -2,18 +2,24 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace SeleniumUser
 {
-    public class User
+    public static class User
     {
+        static User()
+        { 
+            ScreenshotDirectory = @"c:\temp\screenshots\";
+        }
+
         public static IWebDriver Driver { get; set; }
+
+        public static string ScreenshotDirectory { get; set; }
 
         private static int MAX_RETRIES = 15;
 
@@ -28,17 +34,17 @@ namespace SeleniumUser
                     var result = condition();
                     if (result) return;
 
-                    Debug.WriteLine(string.Format("Wait condition '{0}' is false, retrying...", message));
+                    Debug.WriteLine("Wait condition '{0}' is false, retrying...", message);
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine(string.Format("Wait caught exception {0} for '{1}', retrying...", e.Message, message));
+                    Debug.WriteLine("Wait caught exception {0} for '{1}', retrying...", e.Message, message);
                 }
 
                 Thread.Sleep(RETRY_DELAY);
             }
 
-            (Driver as ITakesScreenshot).GetScreenshot().SaveAsFile(@"c:\temp\screenshots\failure.png", System.Drawing.Imaging.ImageFormat.Png);
+            (Driver as ITakesScreenshot).GetScreenshot().SaveAsFile(Path.Combine(ScreenshotDirectory, "failure.png"), ImageFormat.Png);
 
             Assert.Fail(message);
         }
@@ -65,10 +71,52 @@ namespace SeleniumUser
             
         }
 
-        public static void ShouldSee(By by)
+        public static void ShouldSee(By by, bool searchFrames = false)
         {
             Debug.WriteLine(by + " should be visible");
-            Wait(@by + " should be visible", () => Driver.FindElement(by).Displayed);
+
+            var frames = Driver.FindElements(By.TagName("iframe"));
+
+            if (frames.Any() && searchFrames)
+            {
+                if (!SearchForElementInFrames(by, FrameNode.FindFrames(Driver)))
+                {
+                    Assert.Fail("Could not find element by" + @by);
+                }
+            }
+            else
+            {
+                Wait(@by + " should be visible", () =>
+                    Driver.FindElement(by).Displayed ||
+                    Driver.FindElement(by).GetAttribute("visability") == "visible");
+            }
+        }
+
+        private static bool SearchForElementInFrames(By by, FrameNode node)
+        {
+            foreach (var n in node.Frames)
+            {
+                FrameNode.NavigateToNode(Driver, n);
+
+                if (Driver.FindElements(by).Any(x => x.Displayed) ||
+                    Driver.FindElement(by).GetAttribute("visability") == "visible")
+                {
+                    Driver.SwitchTo().DefaultContent();
+                    return true;
+                }
+
+                if (n.HasFrames)
+                {
+                    if (SearchForElementInFrames(by, n))
+                    {
+                        return true;
+                    }
+
+                    FrameNode.NavigateToNode(Driver, n);
+                }
+            }
+
+            return false;
         }
 
         public static void ShouldNotSee(By by)
@@ -93,14 +141,13 @@ namespace SeleniumUser
         {
             Debug.WriteLine("Clicking " + by);
 
-            ReadOnlyCollection<IWebElement> frames = Driver.FindElements(By.TagName("iframe"));
-
+            var frames = Driver.FindElements(By.TagName("iframe"));
             if (frames.Any() && searchFrames)
             {
                 var wasPerformed =
                     PerformActionInFrame(() =>
                         {
-                            IWebElement element = Driver.FindElements(by).SingleOrDefault();
+                            var element = Driver.FindElements(by).SingleOrDefault();
                             return element != null;
                         }, () =>
                         {
@@ -111,7 +158,7 @@ namespace SeleniumUser
                                 });
 
                             Driver.SwitchTo().DefaultContent();
-                        }, FindFrames(null));
+                        }, FrameNode.FindFrames(Driver));
 
                 if (!wasPerformed)
                 {
@@ -130,7 +177,7 @@ namespace SeleniumUser
 
         public static void Clicks(By by, string text, bool searchFrames = false)
         {
-            ReadOnlyCollection<IWebElement> frames = Driver.FindElements(By.TagName("iframe"));
+            var frames = Driver.FindElements(By.TagName("iframe"));
 
             if (frames.Any() && searchFrames)
             {
@@ -142,13 +189,11 @@ namespace SeleniumUser
                         },
                                          () =>
                                              {
-                                                 IWebElement element =
+                                                 var element =
                                                      Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
                                                  Wait(@by + " attempting click", () => element.Click());
                                                  Driver.SwitchTo().DefaultContent();
-                                             }, FindFrames(null));
-
-                Driver.SwitchTo().DefaultContent();
+                                             }, FrameNode.FindFrames(Driver));
 
                 if (!wasPerformed)
                 {
@@ -163,11 +208,11 @@ namespace SeleniumUser
             }
         }
 
-        private static bool PerformActionInFrame(Func<bool> condition, Action action, FrameBranch branch)
+        private static bool PerformActionInFrame(Func<bool> condition, Action action, FrameNode node)
         {
-            foreach (FrameBranch b in branch.Frames)
+            foreach (var n in node.Frames)
             {
-                NavigateToBranch(b);
+                FrameNode.NavigateToNode(Driver, n);
 
                 if (condition())
                 {
@@ -175,14 +220,14 @@ namespace SeleniumUser
                     return true;
                 }
 
-                if (!b.HasFrames()) continue;
+                if (!n.HasFrames) continue;
 
-                if (PerformActionInFrame(condition, action, b))
+                if (PerformActionInFrame(condition, action, n))
                 {
                     return true;
                 }
 
-                NavigateToBranch(b);
+                FrameNode.NavigateToNode(Driver, n);
             }
 
             return false;
@@ -196,7 +241,7 @@ namespace SeleniumUser
 
             if (frames.Any() && searchFrames)
             {
-                if (!SearchForTextInFrames(by, text, FindFrames(null)))
+                if (!SearchForTextInFrames(by, text, FrameNode.FindFrames(Driver)))
                 {
                     Assert.Fail("Could not find text " + text);
                 }
@@ -209,11 +254,11 @@ namespace SeleniumUser
             return false;
         }
 
-        private static bool SearchForTextInFrames(By by, string text,  FrameNode branch)
+        private static bool SearchForTextInFrames(By by, string text,  FrameNode node)
         {
-            foreach (var b in branch.Frames)
+            foreach (var n in node.Frames)
             {
-                NavigateToNode(b);
+                FrameNode.NavigateToNode(Driver, n);
 
                 if (Driver.FindElements(by).Any(x => x.Text.Contains(text) && x.Displayed))
                 {
@@ -221,67 +266,14 @@ namespace SeleniumUser
                     return true;
                 }
 
-                if (b.HasFrames)
+                if (n.HasFrames)
                 {
-                    if (SearchForTextInFrames(by, text, b))
+                    if (SearchForTextInFrames(by, text, n))
                     {
                         return true;
                     }
 
-                    NavigateToNode(b);
-                }
-            }
-
-            return false;
-        }
-        
-        public static bool ShouldSeeElement(By by, string tagId, bool searchFrames = false)
-        {
-            Thread.Sleep(RETRY_DELAY);
-
-            ReadOnlyCollection<IWebElement> frames = Driver.FindElements(By.TagName("iframe"));
-
-            if (frames.Any() && searchFrames)
-            {
-                if (!SearchForElementInFrames(by, tagId, FindFrames(null)))
-                {
-                    Assert.Fail("Could not find element with Id " + tagId);
-                }
-            }
-            else
-            {
-                Wait(@by + " should see element with Id " + tagId,
-                     () =>
-                     Driver.FindElements(by)
-                           .Any(
-                               x =>
-                               x.GetAttribute("id") == tagId &&
-                               (x.Displayed || x.GetAttribute("visability") == "visible")));
-            }
-
-            return false;
-        }
-
-        private static bool SearchForElementInFrames(By by, string tagId, FrameBranch branch)
-        {
-            foreach (FrameBranch b in branch.Frames)
-            {
-                NavigateToBranch(b);
-
-                if (Driver.FindElements(by).Any(x => x.GetAttribute("id") == tagId && x.Displayed))
-                {
-                    Driver.SwitchTo().DefaultContent();
-                    return true;
-                }
-
-                if (b.HasFrames())
-                {
-                    if (SearchForElementInFrames(by, tagId, b))
-                    {
-                        return true;
-                    }
-
-                    NavigateToBranch(b);
+                    FrameNode.NavigateToNode(Driver, n);
                 }
             }
 
@@ -323,72 +315,6 @@ namespace SeleniumUser
                 Driver.FindElement(by).Clear();
                 return true;
             });
-        }
-
-        private static FrameNode FindFrames(FrameNode branch)
-        {
-            var iFrame = By.TagName("iframe");
-
-            if (branch == null)
-                branch = new FrameNode(null);
-
-            NavigateToNode(branch);
-
-            var frames = Driver.FindElements(iFrame);
-            if (frames.Any())
-            {
-                foreach (var frame in frames)
-                {
-                    var src = frame.GetAttribute("src");
-                    var name = frame.GetAttribute("name");
-                    var id = frame.GetAttribute("id");
-
-                    var hasFrame = branch.HasFrame(src);
-
-                    if (!hasFrame && !string.IsNullOrEmpty(src))
-                    {
-                        var childBranch = branch.Add(id, name, src);
-
-                        if (Driver.FindElements(iFrame).Any())
-                        {
-                            FindFrames(childBranch);
-
-                            NavigateToNode(branch);
-                        }
-                    }
-                }
-            }
-
-            return branch;
-        }
-
-        private static void NavigateToNode(FrameNode node)
-        {
-            var path = new List<FrameNode>();
-
-            do
-            {
-                path.Add(node);
-
-                node = node.Parent;
-
-            } while (node != null && node.HasParent);
-
-            path.Reverse();
-
-            Driver.SwitchTo().DefaultContent();
-
-            foreach (var src in path)
-            {
-                // navigate to iFrame
-                var element = Driver.FindElements(By.TagName("iframe"))
-                    .SingleOrDefault(x => x.GetAttribute("src") == node.Src && x.GetAttribute("id") == node.Id && x.GetAttribute("name") == node.Name);
-
-                if (element != null)
-                {
-                    Driver.SwitchTo().Frame(element);
-                }
-            }
         }
     }
 }

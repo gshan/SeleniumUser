@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using OpenQA.Selenium;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace SeleniumUser
@@ -75,6 +76,74 @@ namespace SeleniumUser
             Frames.Add(branch);
 
             return branch;
+        }
+
+        public static FrameNode FindFrames(IWebDriver driver, FrameNode branch = null)
+        {
+            var iFrame = By.TagName("iframe");
+
+            if (branch == null)
+                branch = new FrameNode(null);
+
+            NavigateToNode(driver, branch);
+
+            var frames = driver.FindElements(iFrame);
+            if (frames.Any())
+            {
+                foreach (var frame in frames)
+                {
+                    var src = frame.GetAttribute("src");
+                    var name = frame.GetAttribute("name");
+                    var id = frame.GetAttribute("id");
+
+                    var hasFrame = branch.HasFrame(src);
+
+                    if (!hasFrame && !string.IsNullOrEmpty(src))
+                    {
+                        var childBranch = branch.Add(id, name, src);
+
+                        if (driver.FindElements(iFrame).Any())
+                        {
+                            FindFrames(driver, childBranch);
+
+                            NavigateToNode(driver, branch);
+                        }
+                    }
+                }
+            }
+
+            return branch;
+        }
+
+        public static void NavigateToNode(IWebDriver driver, FrameNode node)
+        {
+            var path = new List<FrameNode>();
+
+            do
+            {
+                path.Add(node);
+                node = node.Parent;
+
+            } while (node != null && node.HasParent);
+
+            path.Reverse();
+
+            driver.SwitchTo().DefaultContent();
+
+            foreach (var src in path)
+            {
+                // navigate to iFrame
+                var element = driver.FindElements(By.TagName("iframe"))
+                    .SingleOrDefault(x => 
+                        x.GetAttribute("src") == node.Src && 
+                        x.GetAttribute("id") == node.Id && 
+                        x.GetAttribute("name") == node.Name);
+
+                if (element != null)
+                {
+                    driver.SwitchTo().Frame(element);
+                }
+            }
         }
     }
 }
