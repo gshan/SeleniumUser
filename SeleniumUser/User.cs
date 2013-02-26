@@ -296,26 +296,26 @@ namespace SeleniumUser
             makeSelection();
         }
 
-        public static void InputText(By by, string text)
-        {
-            Debug.WriteLine("Inputing " + by);
-
-            Wait(@by + " should be intputable", () =>
-            {
-                Driver.FindElement(by).SendKeys(text);
-                return true;
-            });
-        }
-
-        public static void ClearsInput(By by)
+        public static void ClearsInput(By by, bool searchFrames = false)
         {
             Debug.WriteLine("Clearing " + by);
 
-            Wait(@by + " should be clearable", () =>
+            Action clearInput = () =>
             {
-                Driver.FindElement(by).Clear();
-                return true;
-            });
+                Wait(@by + " should be clearable", () =>
+                {
+                    Driver.FindElement(by).Clear();
+                    return true;
+                });
+            };
+
+            if (searchFrames)
+            {
+                PerformActionInFrame(() => HasElement(by), clearInput, FrameNode.FindFrames(Driver));
+                return;
+            }
+
+            clearInput();
         }
 
         private static bool PageHasIFrames()
