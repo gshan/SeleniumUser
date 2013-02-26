@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>SeleniumUser</id>
+        <version>0.0.2</version>
+        <title />
+        <authors>Daniel Zajork</authors>
+        <owners />
+        <licenseUrl>http://github.com/danzajork/SeleniumUser/blob/master/LICENSE</licenseUrl>
+        <projectUrl>http://github.com/danzajork/SeleniumUser</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>My package description.</description>
+        <summary>SeleniumUser
+A simple client wrapper in C# on top of selenium for writing UI automation tests.</summary>
+        <copyright>Daniel Zajork</copyright>
+        <language>en-US</language>
+        <tags>Selenium, UI automation tests</tags>
+        <dependencies>
+            <dependency id="Selenium.Support" version="2.30.0" />
+            <dependency id="Selenium.WebDriver" version="2.30.0" />
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="bin\Release\SeleniumUser.dll" target="lib" />
+    </files>
+</package>
