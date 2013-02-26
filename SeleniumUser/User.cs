@@ -75,13 +75,7 @@ namespace SeleniumUser
         {
             Debug.WriteLine(by + " should be visible");
 
-<<<<<<< HEAD
             if (PageHasIFrames() && searchFrames)
-=======
-            var frames = Driver.FindElements(By.TagName("iframe"));
-
-            if (frames.Any() && searchFrames)
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
             {
                 if (!SearchForElementInFrames(by, FrameNode.FindFrames(Driver)))
                 {
@@ -126,10 +120,7 @@ namespace SeleniumUser
         public static void ShouldNotSee(By by)
         {
             Debug.WriteLine(by + " should not be visible");
-<<<<<<< HEAD
 
-=======
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
             Wait(@by + " should not be visible", () =>
             {
                 try
@@ -149,12 +140,7 @@ namespace SeleniumUser
         {
             Debug.WriteLine("Clicking " + by);
 
-<<<<<<< HEAD
             if (PageHasIFrames() && searchFrames)
-=======
-            var frames = Driver.FindElements(By.TagName("iframe"));
-            if (frames.Any() && searchFrames)
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
             {
                 var wasPerformed =
                     PerformActionInFrame(() =>
@@ -189,22 +175,13 @@ namespace SeleniumUser
 
         public static void Clicks(By by, string text, bool searchFrames = false)
         {
-<<<<<<< HEAD
             if (PageHasIFrames() && searchFrames)
-=======
-            var frames = Driver.FindElements(By.TagName("iframe"));
-
-            if (frames.Any() && searchFrames)
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
             {
                 var wasPerformed =
                     PerformActionInFrame(() =>
                         {
-<<<<<<< HEAD
                             var element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
-=======
-                            IWebElement element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
+
                             return element != null;
                         },
                                          () =>
@@ -222,54 +199,15 @@ namespace SeleniumUser
             }
             else
             {
-<<<<<<< HEAD
                 var element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
-=======
-                IWebElement element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
 
                 Wait("Attempting click", () => element.Click());
             }
         }
 
-<<<<<<< HEAD
         public static bool ShouldSeeText(By by, string text, bool searchFrames = false)
         {
             if (PageHasIFrames() && searchFrames)
-=======
-        private static bool PerformActionInFrame(Func<bool> condition, Action action, FrameNode node)
-        {
-            foreach (var n in node.Frames)
-            {
-                FrameNode.NavigateToNode(Driver, n);
-
-                if (condition())
-                {
-                    action();
-                    return true;
-                }
-
-                if (!n.HasFrames) continue;
-
-                if (PerformActionInFrame(condition, action, n))
-                {
-                    return true;
-                }
-
-                FrameNode.NavigateToNode(Driver, n);
-            }
-
-            return false;
-        }
-
-        public static bool ShouldSeeText(By by, string text, bool searchFrames = false)
-        {
-            Thread.Sleep(RETRY_DELAY);
-
-            var frames = Driver.FindElements(By.TagName("iframe"));
-
-            if (frames.Any() && searchFrames)
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
             {
                 if (!SearchForTextInFrames(by, text, FrameNode.FindFrames(Driver)))
                 {
@@ -310,7 +248,6 @@ namespace SeleniumUser
             return false;
         }
 
-<<<<<<< HEAD
         public static void InputText(By by, string text, bool searchFrames = false)
         {
             Debug.WriteLine("Inputing " + by);
@@ -357,7 +294,8 @@ namespace SeleniumUser
             }
 
             makeSelection();
-=======
+        }
+
         public static void InputText(By by, string text)
         {
             Debug.WriteLine("Inputing " + by);
@@ -367,22 +305,6 @@ namespace SeleniumUser
                 Driver.FindElement(by).SendKeys(text);
                 return true;
             });
-        }
-
-        public static void MakeSelection(By by, string selectText)
-        {
-            Debug.WriteLine("Making selection on " + by);
-
-            Wait(@by + " should be selectable", () =>
-            {
-                var dropDownListBox = Driver.FindElement(by);
-                var clickThis = new SelectElement(dropDownListBox);
-
-                clickThis.SelectByText(selectText);
-
-                return true;
-            });
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
         }
 
         public static void ClearsInput(By by)
@@ -395,7 +317,6 @@ namespace SeleniumUser
                 return true;
             });
         }
-<<<<<<< HEAD
 
         private static bool PageHasIFrames()
         { 
@@ -434,7 +355,5 @@ namespace SeleniumUser
 
             return false;
         }
-=======
->>>>>>> 9858e468f14183d9c6f6df9552ec1f9bd252b397
     }
 }
