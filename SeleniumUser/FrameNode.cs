@@ -130,14 +130,14 @@ namespace SeleniumUser
 
             driver.SwitchTo().DefaultContent();
 
-            foreach (var src in path)
+            foreach (var n in path)
             {
                 // navigate to iFrame
                 var element = driver.FindElements(By.TagName("iframe"))
                     .SingleOrDefault(x => 
-                        x.GetAttribute("src") == node.Src && 
-                        x.GetAttribute("id") == node.Id && 
-                        x.GetAttribute("name") == node.Name);
+                        x.GetAttribute("src") == n.Src && 
+                        x.GetAttribute("id") == n.Id && 
+                        x.GetAttribute("name") == n.Name);
 
                 if (element != null)
                 {
