@@ -130,7 +130,11 @@ namespace SeleniumUser
         {
             var element = Driver.FindElements(by).SingleOrDefault(x => x.Text.Contains(text));
 
-            Wait("Attempting click", () => element.Click());
+            Wait("Attempting click", () => 
+                { 
+                    element.Click(); 
+                    return true; 
+                });
         }
 
         public static void InputText(By by, string text)
