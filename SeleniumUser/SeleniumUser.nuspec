@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
         <id>SeleniumUser</id>
-        <version>0.0.3</version>
+        <version>0.0.4</version>
         <title />
         <authors>Daniel Zajork</authors>
         <owners />
@@ -14,7 +14,7 @@
 A simple client wrapper in C# on top of selenium for writing UI automation tests.</summary>
         <copyright>Daniel Zajork</copyright>
         <language>en-US</language>
-        <tags>Selenium, UI automation tests</tags>
+        <tags>Selenium ui automation tests test</tags>
         <dependencies>
             <dependency id="Selenium.Support" version="2.30.0" />
             <dependency id="Selenium.WebDriver" version="2.30.0" />
